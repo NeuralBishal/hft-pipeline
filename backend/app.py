@@ -46,98 +46,543 @@ except Exception as e:
 # HTML template (same as before, but add mode indicator)
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>HFT Pipeline Analyzer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HFT Analytics Platform | Quantitative Trading Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Courier New', monospace; max-width: 800px; margin: 50px auto; padding: 20px; background: #0a0e27; color: #00ff88; }
-        .container { background: #1a1f3a; border-radius: 10px; padding: 30px; box-shadow: 0 0 20px rgba(0,255,136,0.2); }
-        h1 { text-align: center; border-bottom: 2px solid #00ff88; padding-bottom: 10px; }
-        .upload-area { border: 2px dashed #00ff88; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; margin: 20px 0; }
-        .upload-area:hover { background: rgba(0,255,136,0.1); }
-        button { background: #00ff88; color: #0a0e27; border: none; padding: 10px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #00cc66; }
-        .results { margin-top: 30px; padding: 20px; background: #0a0e27; border-radius: 5px; display: none; }
-        .metric { display: inline-block; width: 45%; margin: 10px; padding: 10px; background: #1a1f3a; border-radius: 5px; }
-        .metric-value { font-size: 24px; font-weight: bold; }
-        .positive { color: #00ff88; }
-        .negative { color: #ff4444; }
-        .loading { text-align: center; display: none; }
-        .badge { display: inline-block; background: #00ff88; color: #0a0e27; padding: 5px 10px; border-radius: 5px; font-size: 12px; margin-left: 10px; }
-        .c-badge { background: #ff6600; color: white; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            min-height: 100vh;
+            color: #1a1a2e;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0066cc, #00cc99);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0066cc, #00cc99);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .badge {
+            background: #00cc99;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Upload Card */
+        .upload-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafbfc;
+        }
+
+        .upload-area:hover {
+            border-color: #0066cc;
+            background: #f0f4f9;
+        }
+
+        .upload-area.drag-over {
+            border-color: #00cc99;
+            background: #e6f7f0;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .stat-value.positive {
+            color: #00cc99;
+        }
+
+        .stat-value.negative {
+            color: #ff4757;
+        }
+
+        .stat-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #334155;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            display: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .results-panel.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Button */
+        .analyze-btn {
+            background: linear-gradient(135deg, #0066cc, #0052a3);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1.5rem;
+            width: 100%;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,102,204,0.3);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner.show {
+            display: block;
+        }
+
+        .spinner-circle {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #0066cc;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Preview Table */
+        .preview-table {
+            margin-top: 1rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
+        }
+
+        .preview-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .preview-table th, .preview-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .preview-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .stat-value { font-size: 1.5rem; }
+        }
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">📊</div>
+                <h1>HFT Analytics</h1>
+                <span class="badge" id="engineBadge">Loading...</span>
+            </div>
+            <div style="font-size: 0.8rem; color: #64748b;">
+                Quantitative Trading Dashboard
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
-        <h1>🚀 HFT Pipeline Analyzer <span class="badge {{badge_class}}">{{mode}}</span></h1>
-        <p style="text-align: center">Upload any stock CSV (Timestamp,Open,High,Low,Close,Volume) and get HFT-grade analysis!</p>
-        
-        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-            <p>📁 Click to upload CSV file</p>
-            <input type="file" id="fileInput" accept=".csv" style="display: none">
+        <!-- Upload Card -->
+        <div class="upload-card">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <h3>Upload Market Data</h3>
+                <p style="color: #64748b; margin-top: 8px;">CSV format: Timestamp, Open, High, Low, Close, Volume</p>
+                <input type="file" id="fileInput" accept=".csv" style="display: none;">
+            </div>
+            <div class="file-info" id="fileInfo">
+                <strong>Selected file:</strong> <span id="fileName"></span>
+                <div class="preview-table" id="previewTable"></div>
+            </div>
+            <button class="analyze-btn" id="analyzeBtn" disabled>⚡ Run HFT Analysis ⚡</button>
         </div>
-        
-        <div style="text-align: center">
-            <button onclick="analyze()">⚡ Analyze Now ⚡</button>
+
+        <!-- Loading Spinner -->
+        <div class="spinner" id="spinner">
+            <div class="spinner-circle"></div>
+            <p>Processing with C engine...</p>
+            <p style="font-size: 0.8rem; color: #64748b;">Lock-free ring buffer | 400k+ bars/sec</p>
         </div>
-        
-        <div class="loading" id="loading">
-            <p>🔄 Processing with {{mode}} engine...</p>
+
+        <!-- Results Panel -->
+        <div class="results-panel" id="resultsPanel">
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="chart-container">
+                <div class="chart-title">📈 Performance Comparison</div>
+                <canvas id="performanceChart"></canvas>
+            </div>
+            <div style="margin-top: 1rem; padding: 1rem; background: #f0f4f9; border-radius: 12px;">
+                <p style="font-size: 0.9rem; color: #475569; margin-bottom: 8px;">🔬 What this means:</p>
+                <ul style="margin-left: 1.5rem; color: #64748b; font-size: 0.85rem;">
+                    <li><strong>Accuracy > 50%</strong> means better than random guessing</li>
+                    <li><strong>Positive Alpha</strong> means strategy outperformed buy & hold</li>
+                    <li><strong>Throughput</strong> shows C engine speed (Python would be 50x slower)</li>
+                </ul>
+            </div>
         </div>
-        
-        <div class="results" id="results">
-            <h3>📊 Analysis Results</h3>
-            <div class="metric"><div>📈 Strategy Return</div><div class="metric-value" id="totalReturn">-</div></div>
-            <div class="metric"><div>🎯 Prediction Accuracy</div><div class="metric-value" id="accuracy">-</div></div>
-            <div class="metric"><div>📊 Total Predictions</div><div class="metric-value" id="predictions">-</div></div>
-            <div class="metric"><div>✅ Correct Predictions</div><div class="metric-value" id="correct">-</div></div>
-            <div class="metric"><div>💼 Buy & Hold Return</div><div class="metric-value" id="buyHold">-</div></div>
-            <div class="metric"><div>⚡ Alpha vs Market</div><div class="metric-value" id="alpha">-</div></div>
-            <div class="metric"><div>🚀 Throughput</div><div class="metric-value" id="throughput">-</div></div>
-            <div class="metric"><div>⏱️ Processing Time</div><div class="metric-value" id="time">-</div></div>
-            <p id="message" style="text-align: center; margin-top: 20px; color: #00ff88"></p>
+
+        <div class="footer">
+            Built with C engine • Lock-free ring buffer • Real-time HFT pipeline
         </div>
     </div>
 
     <script>
-        async function analyze() {
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
-            if (!file) { alert('Please select a CSV file first!'); return; }
+        let selectedFile = null;
+        let csvPreview = [];
+
+        // Check engine health
+        async function checkEngine() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                const badge = document.getElementById('engineBadge');
+                if (data.engine === 'C') {
+                    badge.textContent = 'C ENGINE • 400k bars/sec';
+                    badge.style.background = '#00cc99';
+                } else {
+                    badge.textContent = 'Python (SLOW)';
+                    badge.style.background = '#ff4757';
+                }
+            } catch(e) {
+                document.getElementById('engineBadge').textContent = 'Engine: Unknown';
+            }
+        }
+
+        // Preview CSV file
+        function previewCSV(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n').slice(0, 6); // First 5 rows
+                const headers = lines[0].split(',');
+                
+                let html = '<table><thead><tr>';
+                headers.forEach(h => html += `<th>${h.trim()}</th>`);
+                html += '</tr></thead><tbody>';
+                
+                for (let i = 1; i < lines.length && i < 6; i++) {
+                    const cells = lines[i].split(',');
+                    if (cells.length >= 6) {
+                        html += '<tr>';
+                        cells.slice(0, 6).forEach(c => html += `<td>${c.trim()}</td>`);
+                        html += '</tr>';
+                    }
+                }
+                html += '</tbody></table><p style="margin-top: 8px; color: #64748b;">Preview: first 5 rows</p>';
+                document.getElementById('previewTable').innerHTML = html;
+            };
+            reader.readAsText(file);
+        }
+
+        // Upload area handlers
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileNameSpan = document.getElementById('fileName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        uploadArea.onclick = () => fileInput.click();
+        
+        uploadArea.ondragover = (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        };
+        
+        uploadArea.ondragleave = () => {
+            uploadArea.classList.remove('drag-over');
+        };
+        
+        uploadArea.ondrop = (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                handleFile(file);
+            } else {
+                alert('Please upload a CSV file');
+            }
+        };
+
+        fileInput.onchange = (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        };
+
+        function handleFile(file) {
+            selectedFile = file;
+            fileNameSpan.textContent = file.name;
+            fileInfo.classList.add('show');
+            analyzeBtn.disabled = false;
+            previewCSV(file);
+        }
+
+        // Analyze function
+        analyzeBtn.onclick = async () => {
+            if (!selectedFile) return;
             
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', selectedFile);
             
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('results').style.display = 'none';
+            document.getElementById('spinner').classList.add('show');
+            document.getElementById('resultsPanel').classList.remove('show');
+            analyzeBtn.disabled = true;
             
             try {
-                const response = await fetch('/analyze', { method: 'POST', body: formData });
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
                 const data = await response.json();
                 
                 if (data.success) {
-                    document.getElementById('totalReturn').innerHTML = data.total_return + '%';
-                    document.getElementById('totalReturn').className = 'metric-value ' + (data.total_return > 0 ? 'positive' : 'negative');
-                    document.getElementById('accuracy').innerHTML = data.accuracy + '%';
-                    document.getElementById('predictions').innerHTML = data.predictions;
-                    document.getElementById('correct').innerHTML = data.correct;
-                    document.getElementById('buyHold').innerHTML = data.buy_hold + '%';
-                    document.getElementById('buyHold').className = 'metric-value ' + (data.buy_hold > 0 ? 'positive' : 'negative');
-                    document.getElementById('alpha').innerHTML = data.alpha + '%';
-                    document.getElementById('alpha').className = 'metric-value ' + (data.alpha > 0 ? 'positive' : 'negative');
-                    document.getElementById('throughput').innerHTML = data.throughput.toLocaleString() + ' bars/sec';
-                    document.getElementById('time').innerHTML = data.elapsed_seconds + ' sec';
-                    document.getElementById('message').innerHTML = data.message;
-                    document.getElementById('results').style.display = 'block';
+                    displayResults(data);
                 } else {
                     alert('Error: ' + data.error);
                 }
             } catch (error) {
                 alert('Error: ' + error);
             } finally {
-                document.getElementById('loading').style.display = 'none';
+                document.getElementById('spinner').classList.remove('show');
+                analyzeBtn.disabled = false;
             }
+        };
+
+        function displayResults(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            const stats = [
+                { label: 'Strategy Return', value: data.total_return + '%', positive: data.total_return > 0 },
+                { label: 'Buy & Hold', value: data.buy_hold + '%', positive: data.buy_hold > 0 },
+                { label: 'Alpha', value: data.alpha + '%', positive: data.alpha > 0 },
+                { label: 'Accuracy', value: data.accuracy + '%', positive: data.accuracy > 50 },
+                { label: 'Predictions', value: data.predictions.toLocaleString(), positive: null },
+                { label: 'Correct', value: data.correct.toLocaleString(), positive: null },
+                { label: 'Throughput', value: data.throughput.toLocaleString() + ' bars/sec', positive: null },
+                { label: 'Processing Time', value: data.elapsed_seconds + ' sec', positive: null }
+            ];
+            
+            statsGrid.innerHTML = stats.map(stat => `
+                <div class="stat-card">
+                    <div class="stat-label">${stat.label}</div>
+                    <div class="stat-value ${stat.positive === true ? 'positive' : stat.positive === false ? 'negative' : ''}">${stat.value}</div>
+                </div>
+            `).join('');
+            
+            // Create chart
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            if (window.performanceChart) window.performanceChart.destroy();
+            
+            window.performanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Strategy Return', 'Buy & Hold', 'Alpha'],
+                    datasets: [{
+                        label: 'Return (%)',
+                        data: [data.total_return, data.buy_hold, data.alpha],
+                        backgroundColor: ['#00cc99', '#0066cc', '#ff4757'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw}%` } }
+                    }
+                }
+            });
+            
+            document.getElementById('resultsPanel').classList.add('show');
         }
+
+        checkEngine();
     </script>
 </body>
 </html>
