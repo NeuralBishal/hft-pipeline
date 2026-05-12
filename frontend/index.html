@@ -1,0 +1,187 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HFT Pipeline Analyzer</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0e27;
+            color: #00ff88;
+        }
+        .container {
+            background: #1a1f3a;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,255,136,0.2);
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #00ff88;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .upload-area:hover {
+            background: rgba(0,255,136,0.1);
+        }
+        button {
+            background: #00ff88;
+            color: #0a0e27;
+            border: none;
+            padding: 10px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00cc66;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #0a0e27;
+            border-radius: 5px;
+            display: none;
+        }
+        .metric {
+            display: inline-block;
+            width: 45%;
+            margin: 10px;
+            padding: 10px;
+            background: #1a1f3a;
+            border-radius: 5px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffaa00;
+        }
+        .positive { color: #00ff88; }
+        .negative { color: #ff4444; }
+        .loading {
+            text-align: center;
+            display: none;
+        }
+        .error {
+            color: #ff4444;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 HFT Pipeline Analyzer</h1>
+        <p style="text-align: center">Upload any stock CSV (Timestamp,Open,High,Low,Close,Volume) and get HFT-grade analysis in 1 second!</p>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <p>📁 Click to upload CSV file</p>
+            <input type="file" id="fileInput" accept=".csv" style="display: none">
+        </div>
+        
+        <div style="text-align: center">
+            <button onclick="analyze()">⚡ Analyze Now ⚡</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <p>🔄 Processing with C-powered HFT pipeline...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <h3>📊 Analysis Results</h3>
+            <div class="metric">
+                <div>📈 Strategy Return</div>
+                <div class="metric-value" id="totalReturn">-</div>
+            </div>
+            <div class="metric">
+                <div>🎯 Prediction Accuracy</div>
+                <div class="metric-value" id="accuracy">-</div>
+            </div>
+            <div class="metric">
+                <div>📊 Total Predictions</div>
+                <div class="metric-value" id="predictions">-</div>
+            </div>
+            <div class="metric">
+                <div>✅ Correct Predictions</div>
+                <div class="metric-value" id="correct">-</div>
+            </div>
+            <div class="metric">
+                <div>💼 Buy & Hold Return</div>
+                <div class="metric-value" id="buyHold">-</div>
+            </div>
+            <div class="metric">
+                <div>⚡ Alpha vs Market</div>
+                <div class="metric-value" id="alpha">-</div>
+            </div>
+            <div class="metric">
+                <div>🚀 Throughput</div>
+                <div class="metric-value" id="throughput">-</div>
+            </div>
+            <p id="message" style="text-align: center; margin-top: 20px; color: #00ff88"></p>
+        </div>
+    </div>
+
+    <script>
+        async function analyze() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file first!');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalReturn').innerHTML = data.total_return + '%';
+                    document.getElementById('totalReturn').className = 'metric-value ' + (data.total_return > 0 ? 'positive' : 'negative');
+                    
+                    document.getElementById('accuracy').innerHTML = data.accuracy + '%';
+                    document.getElementById('predictions').innerHTML = data.predictions;
+                    document.getElementById('correct').innerHTML = data.correct;
+                    
+                    document.getElementById('buyHold').innerHTML = data.buy_hold + '%';
+                    document.getElementById('buyHold').className = 'metric-value ' + (data.buy_hold > 0 ? 'positive' : 'negative');
+                    
+                    document.getElementById('alpha').innerHTML = data.alpha + '%';
+                    document.getElementById('alpha').className = 'metric-value ' + (data.alpha > 0 ? 'positive' : 'negative');
+                    
+                    document.getElementById('throughput').innerHTML = data.throughput.toLocaleString() + ' bars/sec';
+                    document.getElementById('message').innerHTML = data.message;
+                    
+                    document.getElementById('results').style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error analyzing file: ' + error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
