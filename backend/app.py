@@ -533,30 +533,35 @@ HTML_TEMPLATE = '''
             }
         };
 
-        function displayResults(data) {
-            const statsGrid = document.getElementById('statsGrid');
-            
-            const stats = [
-                { label: 'Strategy Return', value: data.total_return + '%', positive: data.total_return > 0 },
-                { label: 'Buy & Hold', value: data.buy_hold + '%', positive: data.buy_hold > 0 },
-                { label: 'Alpha', value: data.alpha + '%', positive: data.alpha > 0 },
-                { label: 'Accuracy', value: data.accuracy + '%', positive: data.accuracy > 50 },
-                { label: 'Predictions', value: data.predictions.toLocaleString(), positive: null },
-                { label: 'Correct', value: data.correct.toLocaleString(), positive: null },
-                { label: 'Throughput', value: data.throughput.toLocaleString() + ' bars/sec', positive: null },
-                { label: 'Processing Time', value: data.elapsed_seconds + ' sec', positive: null }
-            ];
-            
-            statsGrid.innerHTML = stats.map(stat => `
-                <div class="stat-card">
-                    <div class="stat-label">${stat.label}</div>
-                    <div class="stat-value ${stat.positive === true ? 'positive' : stat.positive === false ? 'negative' : ''}">${stat.value}</div>
-                </div>
-            `).join('');
-            
-            // Create chart
-            const ctx = document.getElementById('performanceChart').getContext('2d');
-            if (window.performanceChart) window.performanceChart.destroy();
+function displayResults(data) {
+    const statsGrid = document.getElementById('statsGrid');
+    
+    const stats = [
+        { label: 'Strategy Return', value: data.total_return + '%', positive: data.total_return > 0 },
+        { label: 'Buy & Hold', value: data.buy_hold + '%', positive: data.buy_hold > 0 },
+        { label: 'Alpha', value: data.alpha + '%', positive: data.alpha > 0 },
+        { label: 'Accuracy', value: data.accuracy + '%', positive: data.accuracy > 50 },
+        { label: 'Predictions', value: data.predictions.toLocaleString(), positive: null },
+        { label: 'Correct', value: data.correct.toLocaleString(), positive: null },
+        { label: 'Throughput', value: data.throughput.toLocaleString() + ' bars/sec', positive: null },
+        { label: 'Processing Time', value: data.elapsed_seconds + ' sec', positive: null }
+    ];
+    
+    statsGrid.innerHTML = stats.map(stat => `
+        <div class="stat-card">
+            <div class="stat-label">${stat.label}</div>
+            <div class="stat-value ${stat.positive === true ? 'positive' : stat.positive === false ? 'negative' : ''}">${stat.value}</div>
+        </div>
+    `).join('');
+    
+    // Safe chart creation - wrap in try/catch
+    try {
+        const canvas = document.getElementById('performanceChart');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (window.performanceChart) {
+                window.performanceChart.destroy();
+            }
             
             window.performanceChart = new Chart(ctx, {
                 type: 'bar',
@@ -578,9 +583,15 @@ HTML_TEMPLATE = '''
                     }
                 }
             });
-            
-            document.getElementById('resultsPanel').classList.add('show');
         }
+    } catch(e) {
+        console.log('Chart error:', e);
+        // If chart fails, still show stats
+        document.getElementById('performanceChart').style.display = 'none';
+    }
+    
+    document.getElementById('resultsPanel').classList.add('show');
+}
 
         checkEngine();
     </script>
